@@ -1,34 +1,27 @@
 import os
 import time
-import threading
 from main import E2EEFacebookMessenger
 
 def start_bot():
-    """Main bot start करें"""
-    print("🚀 Starting E2EE Facebook Messenger Bot on Render...")
-    print(f"📁 Working Directory: {os.getcwd()}")
-    print(f"🔧 Environment: {os.environ.get('RENDER', 'Development')}")
+    print("🚀 Starting E2EE Bot on Render...")
+    print(f"📁 Directory: {os.getcwd()}")
     
-    # Bot instance create करें
-    bot = E2EEFacebookMessenger()
-    
-    # Check if essential configuration है
-    if not bot.token or not bot.target_user:
-        print("❌ Missing token or user ID. Please check your configuration.")
-        print("💡 Make sure token.txt and user_id.txt are properly configured.")
+    # Check essential files
+    if not os.path.exists('token.txt'):
+        print("❌ token.txt missing")
+        return
+        
+    if not os.path.exists('user_id.txt'):
+        print("❌ user_id.txt missing") 
         return
     
-    print("✅ Bot configured successfully")
-    print(f"📱 Messages loaded: {len(bot.messages)}")
-    print(f"👤 Target user: {bot.target_user}")
-    print(f"🔐 Encryption: {'ACTIVE' if bot.fernet else 'INACTIVE'}")
+    bot = E2EEFacebookMessenger()
     
-    # Auto-send start करें
-    interval = int(os.environ.get('MESSAGE_INTERVAL', '300'))  # Default 5 minutes
-    print(f"⏰ Message interval: {interval} seconds")
-    
-    bot.start_auto_encrypted_sending(interval)
+    if bot.token and bot.target_user:
+        # 2 minutes interval
+        bot.start_auto_encrypted_sending(120)
+    else:
+        print("❌ Configuration missing")
 
 if __name__ == "__main__":
-    # Render पर continuous run के लिए
     start_bot()
