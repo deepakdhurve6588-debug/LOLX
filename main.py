@@ -4,15 +4,12 @@ import time
 import os
 import base64
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from datetime import datetime
 
-class E2EEFacebookMessenger:
+class FacebookMessengerBot:
     def __init__(self):
         self.setup_directories()
         self.token = self.load_token()
-        self.api_url = "https://graph.facebook.com/v18.0/me/messages"
         self.messages = self.load_messages()
         self.current_index = 0
         self.is_running = True
@@ -24,7 +21,7 @@ class E2EEFacebookMessenger:
         # Target user ID
         self.target_user = self.load_user_id()
         
-        print("🔐 E2EE MESSENGER INITIALIZED")
+        print("💬 FACEBOOK MESSENGER BOT INITIALIZED")
         print(f"📝 Token Loaded: {self.token[:20]}...")
         print(f"👤 Target User: {self.target_user}")
         print(f"📨 Messages Loaded: {len(self.messages)}")
@@ -77,6 +74,17 @@ class E2EEFacebookMessenger:
         encrypted = self.fernet.encrypt(message.encode())
         return base64.urlsafe_b64encode(encrypted).decode()
     
+    def decrypt_message(self, encrypted_message):
+        """Encrypted message decrypt करें"""
+        if not self.fernet:
+            return encrypted_message
+        
+        try:
+            decrypted = self.fernet.decrypt(base64.urlsafe_b64decode(encrypted_message))
+            return decrypted.decode()
+        except:
+            return encrypted_message
+    
     def log_message(self, message_type, content):
         """Message log करें"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -96,7 +104,7 @@ class E2EEFacebookMessenger:
             if user_id and user_id != "FACEBOOK_USER_ID_HERE":
                 return user_id
             else:
-                print("❌ Please update user_id.txt with target Facebook ID")
+                print("❌ Please update user_id.txt with target Facebook User ID")
                 return None
         except FileNotFoundError:
             print("❌ user_id.txt file not found")
@@ -121,98 +129,65 @@ class E2EEFacebookMessenger:
             
             if response.status_code == 200:
                 user_data = response.json()
-                print(f"✅ TOKEN VALID - User: {user_data.get('name')}")
+                print(f"✅ TOKEN VALID - User/Page: {user_data.get('name')}")
                 return True
             else:
                 error_data = response.json()
                 error_msg = error_data.get('error', {}).get('message', 'Unknown error')
                 print(f"❌ TOKEN ERROR: {error_msg}")
-                
-                # Specific error handling
-                if 'expired' in error_msg.lower():
-                    print("💡 Token expired! Get new token from MonokaiTool")
-                elif 'permission' in error_msg.lower():
-                    print("💡 Permission missing! Check page permissions")
-                
                 return False
         except Exception as e:
             print(f"❌ Verification failed: {e}")
             return False
     
-    def send_test_message(self):
-        """Test message send करें"""
-        print("\n🧪 Sending test message...")
-        
-        test_msg = "✅ Test message from E2EE Bot - " + datetime.now().strftime("%H:%M:%S")
-        
-        payload = {
-            "recipient": {"id": self.target_user},
-            "message": {"text": test_msg},
-            "messaging_type": "MESSAGE_TAG",
-            "tag": "NON_PROMOTIONAL_SUBSCRIPTION"
-        }
-        
-        params = {"access_token": self.token}
-        
-        try:
-            response = requests.post(
-                self.api_url,
-                json=payload,
-                params=params,
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                print("✅ TEST MESSAGE SENT SUCCESSFULLY!")
-                return True
-            else:
-                error_data = response.json()
-                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
-                print(f"❌ TEST FAILED: {error_msg}")
-                return False
-                
-        except Exception as e:
-            print(f"❌ Test error: {e}")
-            return False
-    
-    def send_encrypted_message(self, message):
-        """E2EE encrypted message send करें"""
+    def send_direct_message(self, message):
+        """Direct message user के inbox में send करें"""
         if not self.target_user:
             print("❌ User ID missing")
             return False
         
-        # Message encrypt करें
+        # Message encrypt करें (E2EE)
         encrypted_msg = self.encrypt_message(message)
         
-        # Facebook format में message तैयार करें
-        fb_message = f"🔐 ENCRYPTED_MESSAGE\n{encrypted_msg}\n⏰ {datetime.now().strftime('%H:%M:%S')}"
+        # Final message तैयार करें
+        final_message = f"{message}\n\n🔐 Encrypted: {encrypted_msg[:50]}..."
         
         payload = {
             "recipient": {"id": self.target_user},
-            "message": {"text": fb_message},
+            "message": {"text": final_message},
             "messaging_type": "MESSAGE_TAG",
-            "tag": "NON_PROMOTIONAL_SUBSCRIPTION"
+            "tag": "CONFIRMED_EVENT_UPDATE"  # Better for messaging
         }
         
         params = {"access_token": self.token}
         
         try:
             response = requests.post(
-                self.api_url,
+                "https://graph.facebook.com/v18.0/me/messages",
                 json=payload,
                 params=params,
                 timeout=30
             )
             
             if response.status_code == 200:
-                print(f"✅ Message {self.current_index + 1} sent successfully!")
-                print(f"   📧 Original: {message}")
-                self.log_message("SENT", f"Message {self.current_index + 1}: {message}")
+                print(f"✅ Message sent to inbox!")
+                print(f"   💬 Text: {message}")
+                print(f"   🔐 Encrypted: {encrypted_msg[:30]}...")
+                self.log_message("SENT", f"To: {self.target_user} | Message: {message}")
                 return True
             else:
                 error_data = response.json()
                 error_msg = error_data.get('error', {}).get('message', 'Unknown error')
                 print(f"❌ Send failed: {error_msg}")
+                
+                # Specific error handling
+                if "not authorized" in error_msg.lower():
+                    print("💡 Solution: Page needs to be authorized for messaging")
+                elif "user not found" in error_msg.lower():
+                    print("💡 Solution: Check if user ID is correct")
+                elif "limit" in error_msg.lower():
+                    print("💡 Solution: Rate limit reached, wait for some time")
+                
                 self.log_message("ERROR", error_msg)
                 return False
                 
@@ -221,14 +196,22 @@ class E2EEFacebookMessenger:
             self.log_message("ERROR", f"Network: {e}")
             return False
     
-    def send_next_encrypted_message(self):
-        """Next encrypted message send करें"""
+    def send_test_message(self):
+        """Test message send करें"""
+        print("\n🧪 Sending test message to inbox...")
+        
+        test_msg = "👋 Hello! This is a test message from Messenger Bot - " + datetime.now().strftime("%H:%M:%S")
+        
+        return self.send_direct_message(test_msg)
+    
+    def send_next_message(self):
+        """Next message send करें"""
         if not self.messages:
             print("❌ No messages available")
             return False
         
         message = self.messages[self.current_index]
-        success = self.send_encrypted_message(message)
+        success = self.send_direct_message(message)
         
         if success:
             self.current_index += 1
@@ -242,9 +225,11 @@ class E2EEFacebookMessenger:
             return True
         return False
     
-    def start_auto_encrypted_sending(self, interval_seconds=60):
-        """Automatic encrypted message sending start करें"""
-        print(f"🚀 STARTING AUTO-SEND (Interval: {interval_seconds}s)")
+    def start_auto_messaging(self, interval_seconds=120):
+        """Automatic messaging start करें"""
+        print(f"🚀 STARTING AUTO-MESSAGING (Interval: {interval_seconds}s)")
+        print("=" * 50)
+        print("💬 Messages will go to user's Messenger Inbox")
         print("=" * 50)
         
         # First verify token
@@ -259,33 +244,40 @@ class E2EEFacebookMessenger:
         # Test message send करें
         print("\n🧪 Sending test message first...")
         if not self.send_test_message():
-            print("❌ Test failed. Cannot start auto-send.")
+            print("❌ Test failed. Cannot start auto-messaging.")
+            print("\n💡 COMMON SOLUTIONS:")
+            print("1. Use Page Access Token (not User Token)")
+            print("2. Ensure page has messaging permissions") 
+            print("3. Check if user ID is correct")
+            print("4. Page must be authorized for messaging")
             return
         
-        print("✅ Test successful! Starting auto-send...")
+        print("✅ Test successful! Starting auto-messaging...")
         
         message_count = 0
         while self.is_running:
             try:
                 print(f"\n🎯 Sending message {self.current_index + 1}/{len(self.messages)}...")
                 
-                if self.send_next_encrypted_message():
+                if self.send_next_message():
                     message_count += 1
-                    print(f"📊 Total sent: {message_count}")
+                    print(f"📊 Total messages sent: {message_count}")
                 else:
-                    print("💤 Waiting 30 seconds due to error...")
-                    time.sleep(30)
+                    print("💤 Waiting 60 seconds due to error...")
+                    time.sleep(60)
                     continue
                 
                 print(f"⏰ Next message in {interval_seconds} seconds...")
                 
-                # Countdown
+                # Countdown with progress
                 for i in range(interval_seconds):
                     if not self.is_running:
                         break
                     if i % 30 == 0:
                         remaining = interval_seconds - i
-                        print(f"   ⏳ {remaining}s remaining...")
+                        minutes = remaining // 60
+                        seconds = remaining % 60
+                        print(f"   ⏳ Next in: {minutes}m {seconds}s")
                     time.sleep(1)
                 
             except KeyboardInterrupt:
@@ -293,20 +285,24 @@ class E2EEFacebookMessenger:
                 break
             except Exception as e:
                 print(f"❌ Unexpected error: {e}")
-                time.sleep(30)
+                time.sleep(60)
 
 def main():
-    print("🔐 E2EE FACEBOOK MESSENGER BOT")
+    print("💬 FACEBOOK MESSENGER INBOX BOT")
+    print("=" * 50)
+    print("📨 Messages will be sent to user's Messenger Inbox")
     print("=" * 50)
     
-    bot = E2EEFacebookMessenger()
+    bot = FacebookMessengerBot()
     
     if not bot.token or not bot.target_user:
-        print("❌ Setup incomplete. Please check token.txt and user_id.txt")
+        print("❌ Setup incomplete. Please check:")
+        print("   - token.txt (Facebook Page Access Token)")
+        print("   - user_id.txt (Target User Facebook ID)")
         return
     
     # Auto-start with 2 minutes interval
-    bot.start_auto_encrypted_sending(interval_seconds=120)
+    bot.start_auto_messaging(interval_seconds=120)
 
 if __name__ == "__main__":
     main()
