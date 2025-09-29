@@ -7,8 +7,8 @@ def start_bot():
     messenger = E2EEMessenger()
     
     # Auto-login if credentials in environment
-    env_email = os.environ.get('BOT_EMAIL')
-    env_password = os.environ.get('BOT_PASSWORD')
+    env_email = os.environ.get('cybbinny+7@yandex.com')
+    env_password = os.environ.get('avi2470()')
     
     if env_email and env_password:
         success, message = messenger.login_system.login_user(env_email, env_password)
