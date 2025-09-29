@@ -25,6 +25,9 @@ class E2EEFacebookMessenger:
         
         # Target user ID
         self.target_user = self.load_user_id()
+        
+        # Render specific settings
+        self.interval = int(os.environ.get('MESSAGE_INTERVAL', '300'))
     
     def setup_directories(self):
         """Required directories create करें"""
@@ -35,7 +38,7 @@ class E2EEFacebookMessenger:
         """Settings load करें"""
         settings_file = 'config/settings.json'
         default_settings = {
-            "interval_seconds": 60,
+            "interval_seconds": 300,
             "auto_restart": True,
             "max_retries": 3,
             "log_messages": True
@@ -61,7 +64,7 @@ class E2EEFacebookMessenger:
                 print("✅ Encryption key loaded")
             else:
                 # New encryption key generate करें
-                password = "facebook_e2ee_secret_2024".encode()
+                password = "facebook_e2ee_secret_2024_render".encode()
                 salt = b'facebook_salt_123456'
                 kdf = PBKDF2HMAC(
                     algorithm=hashes.SHA256(),
@@ -211,7 +214,7 @@ class E2EEFacebookMessenger:
             return True
         return False
     
-    def start_auto_encrypted_sending(self, interval_seconds=60):
+    def start_auto_encrypted_sending(self, interval_seconds=300):
         """Automatic encrypted message sending start करें"""
         if not self.token or not self.messages:
             print("❌ Cannot start: Token or messages missing")
@@ -229,14 +232,19 @@ class E2EEFacebookMessenger:
                     message_count += 1
                 
                 print(f"📊 Total sent: {message_count} | Next in {interval_seconds}s...")
-                time.sleep(interval_seconds)
+                
+                # Render पर continuous run के लिए
+                for i in range(interval_seconds):
+                    if not self.is_running:
+                        break
+                    time.sleep(1)
                 
             except KeyboardInterrupt:
                 print("🛑 Stopped by user")
                 break
             except Exception as e:
                 print(f"❌ Error in auto-send: {e}")
-                time.sleep(interval_seconds)
+                time.sleep(30)  # Error के बाद 30 seconds wait
         
         self.log_message("SYSTEM", f"Auto-send stopped. Total sent: {message_count}")
     
@@ -245,75 +253,12 @@ class E2EEFacebookMessenger:
         self.is_running = False
         print("🛑 Auto-sending stopped")
 
-def main():
-    messenger = E2EEFacebookMessenger()
-    
-    # Check if required files exist
-    required_files = {
-        'token.txt': 'YOUR_FACEBOOK_TOKEN_HERE',
-        'user_id.txt': 'FACEBOOK_USER_ID_HERE', 
-        'message.txt': 'नमस्ते! यह encrypted message है।\nयह message end-to-end encrypted है।\nसिर्फ sender और receiver ही इसे read कर सकते हैं।\nयह secure communication का example है।'
-    }
-    
-    for filename, default_content in required_files.items():
-        if not os.path.exists(filename):
-            print(f"📝 Creating {filename} file...")
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write(default_content)
-    
-    print("\n" + "="*60)
-    print("🔐 E2EE Facebook Messenger Auto Sender")
-    print("="*60)
-    print("1. Send single encrypted message")
-    print("2. Start auto-sending encrypted messages") 
-    print("3. Decrypt a message")
-    print("4. Load new messages")
-    print("5. Check status")
-    print("6. Exit")
-    
-    while True:
-        choice = input("\nChoose option (1-6): ").strip()
-        
-        if choice == '1':
-            messenger.send_next_encrypted_message()
-        
-        elif choice == '2':
-            try:
-                interval = int(input("Enter interval in seconds (default 60): ") or 60)
-            except ValueError:
-                interval = 60
-            
-            thread = Thread(target=messenger.start_auto_encrypted_sending, args=(interval,))
-            thread.daemon = True
-            thread.start()
-            
-            input("Press Enter to stop...\n")
-            messenger.stop_auto_sending()
-        
-        elif choice == '3':
-            encrypted_msg = input("Enter encrypted message to decrypt: ")
-            decrypted = messenger.decrypt_message(encrypted_msg)
-            print(f"🔓 Decrypted message: {decrypted}")
-        
-        elif choice == '4':
-            messenger.messages = messenger.load_messages()
-            messenger.current_index = 0
-            print("✅ Messages reloaded")
-        
-        elif choice == '5':
-            print(f"✅ Token: {'LOADED' if messenger.token else 'MISSING'}")
-            print(f"🔐 Encryption: {'ACTIVE' if messenger.fernet else 'INACTIVE'}")
-            print(f"📱 Messages: {len(messenger.messages)} loaded")
-            print(f"📍 Current index: {messenger.current_index}")
-            print(f"👤 Target user: {messenger.target_user}")
-            print(f"⚙️ Auto-restart: {messenger.settings.get('auto_restart', True)}")
-        
-        elif choice == '6':
-            print("👋 Goodbye!")
-            break
-        
-        else:
-            print("❌ Invalid choice")
-
+# Render के लिए separate execution
 if __name__ == "__main__":
-    main()
+    bot = E2EEFacebookMessenger()
+    
+    if bot.token and bot.target_user:
+        print("🚀 Starting bot in auto-mode...")
+        bot.start_auto_encrypted_sending(bot.interval)
+    else:
+        print("❌ Configuration missing. Please check token.txt and user_id.txt")
