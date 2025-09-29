@@ -1,26 +1,35 @@
+from e2ee_messenger import E2EEMessenger
 import os
-import time
-from main import FacebookMessengerBot
 
 def start_bot():
-    print("🚀 Starting Messenger Bot on Render...")
-    print("💬 Direct to Messenger Inbox")
-    print(f"📁 Directory: {os.getcwd()}")
+    print("🚀 E2EE Messenger Bot Starting...")
     
-    # Check essential files
-    required_files = ['token.txt', 'user_id.txt', 'message.txt']
-    for file in required_files:
-        if not os.path.exists(file):
-            print(f"❌ {file} missing")
-            return
+    messenger = E2EEMessenger()
     
-    bot = FacebookMessengerBot()
+    # Auto-login if credentials in environment
+    env_email = os.environ.get('BOT_EMAIL')
+    env_password = os.environ.get('BOT_PASSWORD')
     
-    if bot.token and bot.target_user:
-        # 2 minutes interval
-        bot.start_auto_messaging(120)
+    if env_email and env_password:
+        success, message = messenger.login_system.login_user(env_email, env_password)
+        if success:
+            enc_success, enc_message = messenger.setup_user_encryption(env_email, env_password)
+            if enc_success:
+                messenger.current_user = env_email
+                print(f"✅ Auto-login successful: {env_email}")
+                
+                # Load config and start auto-messaging
+                if messenger.load_facebook_config():
+                    messenger.start_auto_messaging(interval=300)  # 5 minutes
+                else:
+                    print("❌ Facebook configuration missing")
+            else:
+                print(f"❌ Encryption setup failed: {enc_message}")
+        else:
+            print(f"❌ Auto-login failed: {message}")
     else:
-        print("❌ Configuration missing")
+        print("❌ Auto-login credentials missing")
+        print("💡 Set BOT_EMAIL and BOT_PASSWORD environment variables")
 
 if __name__ == "__main__":
     start_bot()
