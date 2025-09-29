@@ -1,25 +1,24 @@
 import os
 import time
-from main import E2EEFacebookMessenger
+from main import FacebookMessengerBot
 
 def start_bot():
-    print("🚀 Starting E2EE Bot on Render...")
+    print("🚀 Starting Messenger Bot on Render...")
+    print("💬 Direct to Messenger Inbox")
     print(f"📁 Directory: {os.getcwd()}")
     
     # Check essential files
-    if not os.path.exists('token.txt'):
-        print("❌ token.txt missing")
-        return
-        
-    if not os.path.exists('user_id.txt'):
-        print("❌ user_id.txt missing") 
-        return
+    required_files = ['token.txt', 'user_id.txt', 'message.txt']
+    for file in required_files:
+        if not os.path.exists(file):
+            print(f"❌ {file} missing")
+            return
     
-    bot = E2EEFacebookMessenger()
+    bot = FacebookMessengerBot()
     
     if bot.token and bot.target_user:
         # 2 minutes interval
-        bot.start_auto_encrypted_sending(120)
+        bot.start_auto_messaging(120)
     else:
         print("❌ Configuration missing")
 
