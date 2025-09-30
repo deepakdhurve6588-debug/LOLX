@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: messenger-bot
+    env: python
+    buildCommand: "pip install -r requirements.txt && playwright install chromium"
+    startCommand: "python send_multiple_targets.py"
+    plan: free 
