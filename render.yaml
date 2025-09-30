@@ -1,7 +1,10 @@
 services:
-  - type: web
-    name: messenger-bot
+  - type: worker
+    name: e2ee-messenger-bot
     env: python
-    buildCommand: "pip install -r requirements.txt && playwright install chromium"
-    startCommand: "python send_multiple_targets.py"
-    plan: free 
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.4
