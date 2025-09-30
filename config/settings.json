@@ -1,8 +1,0 @@
-{
-    "interval_seconds": 60,
-    "auto_restart": true,
-    "max_retries": 3,
-    "log_messages": true,
-    "encryption_enabled": true,
-    "message_format": "🔐 ENCRYPTED_MESSAGE_START\\n{encrypted_message}\\n🔐 ENCRYPTED_MESSAGE_END\\n💡 Use receiver.py to decrypt"
-}
