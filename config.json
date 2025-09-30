@@ -1,8 +1,0 @@
-{
-  "email": "cybbunny+7@yandex.com",
-  "password": "avi2470()",
-  "headless": false,
-  "delay_between_messages": 5,
-  "message_file": "messages.txt",
-  "targets_file": "targets.txt"
-}
