@@ -1,0 +1,17 @@
+# render.yaml
+services:
+  - type: web
+    name: auto-messenger
+    env: php
+    plan: free
+    buildCommand: "chmod +x build.sh && ./build.sh"
+    startCommand: "php -S 0.0.0.0:\$PORT render-dashboard.php"
+    envVars:
+      - key: FB_TOKEN
+        value: your_facebook_token_here
+      - key: FB_UIDS  
+        value: "123456789,987654321,555555555"
+      - key: FB_MESSAGES
+        value: "Hello from Render|Second message|Third message"
+      - key: FB_DELAY
+        value: "5"
