@@ -1,0 +1,10 @@
+{
+    "name": "render-auto-messenger",
+    "description": "Facebook Auto Messenger for Render.com",
+    "type": "project",
+    "require": {
+        "php": "^7.3 || ^8.0",
+        "ext-curl": "*",
+        "ext-json": "*"
+    }
+}
