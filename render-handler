@@ -1,0 +1,60 @@
+<?php
+// render-handler.php
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+require_once 'render-dashboard.php';
+
+try {
+    $messenger = new RenderAutoMessenger();
+    
+    switch ($_GET['action'] ?? '') {
+        case 'test':
+            $result = $messenger->testConnection();
+            echo json_encode([
+                'success' => $result['success'],
+                'error' => $result['error'] ?? null,
+                'http_code' => $result['http_code'] ?? null
+            ]);
+            break;
+            
+        case 'send_batch':
+            $count = intval($_GET['count'] ?? 5);
+            $results = $messenger->runBatch($count);
+            echo json_encode([
+                'success' => true,
+                'results' => $results,
+                'summary' => [
+                    'total' => count($results),
+                    'successful' => count(array_filter($results, fn($r) => $r['success'])),
+                    'failed' => count(array_filter($results, fn($r) => !$r['success']))
+                ]
+            ]);
+            break;
+            
+        case 'get_logs':
+            $logs = $messenger->getLogs(100);
+            echo json_encode([
+                'success' => true,
+                'logs' => $logs,
+                'count' => count($logs)
+            ]);
+            break;
+            
+        case 'clear_logs':
+            if (file_exists('logs/messenger.log')) {
+                unlink('logs/messenger.log');
+            }
+            echo json_encode(['success' => true, 'message' => 'Logs cleared']);
+            break;
+            
+        default:
+            echo json_encode(['success' => false, 'error' => 'Invalid action']);
+    }
+    
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
+}
+?>
